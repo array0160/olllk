@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>臺北跨時空 WebAR 主畫面</title>
+
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+      background: #e8d9b8;
+    }
+
+    /* AR 相機層：一開始存在，但還沒啟動相機 */
+    #arRoot {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background: black;
+    }
+
+    a-scene {
+      position: fixed !important;
+      inset: 0;
+      z-index: 1;
+    }
+
+    /* 主畫面 */
+    #app {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      background-image: url("./background/bg.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 158px;
+      padding: 30px 32px 16px;
+      color: #3d3425;
+      pointer-events: auto;
+      background-image: url("./background/bg.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      border-bottom: 1px solid rgba(90, 70, 40, 0.18);
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .title {
+      font-size: 34px;
+      font-weight: bold;
+      line-height: 1.2;
+    }
+
+    .progress {
+      margin-top: 18px;
+      font-size: 23px;
+      color: #6d5a38;
+    }
+
+    .icon-btn {
+      font-size: 34px;
+      color: #5a4a2c;
+      margin-top: 2px;
+    }
+
+    .card {
+      position: absolute;
+      top: 194px;
+      left: 32px;
+      right: 32px;
+      padding: 28px;
+      border-radius: 14px;
+      color: #2e2619;
+      pointer-events: auto;
+      background-image: url("./background/bg.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      border: 1px solid rgba(90, 70, 40, 0.25);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    }
+
+    .era {
+      font-size: 29px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .name-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+
+    .photo-name {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .status {
+      font-size: 23px;
+      font-weight: bold;
+      color: #8a6d24;
+    }
+
+    .photo-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .main-photo {
+      width: 100%;
+      height: 472px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid rgba(0,0,0,0.18);
+      display: block;
+      background: #ddd;
+    }
+
+    .scan-button {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 280px;
+      height: 88px;
+      border: 3px solid rgba(255,255,255,0.95);
+      background: rgba(0,0,0,0.42);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      font-size: 28px;
+      letter-spacing: 0.3px;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .scan-button:active {
+      background: rgba(0,0,0,0.65);
+    }
+
+    .message {
+      position: absolute;
+      left: 32px;
+      right: 32px;
+      bottom: 172px;
+      padding: 24px;
+      border-radius: 14px;
+      background: rgba(0,0,0,0.66);
+      color: white;
+      text-align: center;
+      font-size: 24px;
+      line-height: 1.45;
+      pointer-events: auto;
+    }
+
+    .bottom-nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 138px;
+      border-top: 1px solid rgba(90,70,40,0.18);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      color: #7a6846;
+      pointer-events: auto;
+      background-image: url("./background/bg.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .nav-item {
+      text-align: center;
+      font-size: 21px;
+      line-height: 1.25;
+    }
+
+    .nav-icon {
+      display: block;
+      font-size: 34px;
+      margin-bottom: 8px;
+    }
+
+    .active {
+      color: #2f281d;
+      font-weight: bold;
+    }
+
+    /* 掃描模式：主畫面全部收起來 */
+    #app.scanning {
+      background-image: none;
+      pointer-events: none;
+    }
+
+    #app.scanning .top-bar,
+    #app.scanning .card,
+    #app.scanning .bottom-nav {
+      display: none;
+    }
+
+    #scanOverlay {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 20px;
+      right: 20px;
+      top: 20px;
+      pointer-events: auto;
+    }
+
+    #scanMessage {
+      background: rgba(0, 0, 0, 0.68);
+      color: white;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 20px;
+      line-height: 1.45;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    #cancelScanBtn {
+      width: 100%;
+      height: 52px;
+      border: none;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.92);
+      color: #222;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    #app.scanning #scanOverlay {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- AR 相機場景：autoStart:false，所以進頁面不會自動開相機 -->
+  <div id="arRoot">
+    <a-scene
+      id="arScene"
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false;"
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <a-entity id="target0" mindar-image-target="targetIndex: 0">
+        <a-plane color="#84bde8" opacity="0.45" position="0 0 0" height="0.6" width="1"></a-plane>
+      </a-entity>
+
+      <a-entity id="target1" mindar-image-target="targetIndex: 1">
+        <a-plane color="#84bde8" opacity="0.45" position="0 0 0" height="0.6" width="1"></a-plane>
+      </a-entity>
+
+      <a-entity id="target2" mindar-image-target="targetIndex: 2">
+        <a-plane color="#84bde8" opacity="0.45" position="0 0 0" height="0.6" width="1"></a-plane>
+      </a-entity>
+    </a-scene>
+  </div>
+
+  <!-- 主畫面 -->
+  <div id="app">
+    <div id="scanOverlay">
+      <div id="scanMessage">正在啟動 AR 鏡頭，請允許相機權限。</div>
+      <button id="cancelScanBtn">取消掃描</button>
+    </div>
+
+    <div class="top-bar">
+      <div class="title-row">
+        <div>
+          <div class="title">填滿年代表 ◎</div>
+          <div class="progress" id="progressText">答題率：0%　已完成 0/3</div>
+        </div>
+        <div class="icon-btn">⌕</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="era" id="eraText">1930年代　約民國19年</div>
+
+      <div class="name-row">
+        <div class="photo-name" id="nameText">臺北明治橋</div>
+        <div class="status" id="statusText">尚未辨識</div>
+      </div>
+
+      <div class="photo-wrap">
+        <img id="photoImg" class="main-photo" src="./images/q1.jpg" alt="老照片">
+        <button class="scan-button" id="goFindBtn">Go find</button>
+      </div>
+    </div>
+
+    <div class="message" id="messageBox">
+      請按 Go find 後，再允許相機權限並將鏡頭對準展場指定老照片。
+    </div>
+
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <span class="nav-icon">AR</span>
+        照片掃描
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">▦</span>
+        填滿年代
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">□</span>
+        歷史故事
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">⚙</span>
+        問卷回饋
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const questions = [
+      {
+        name: "臺北明治橋",
+        era: "1930年代　約民國19年",
+        image: "./images/q1.jpg"
+      },
+      {
+        name: "西門町街景",
+        era: "1960年代　約民國49年",
+        image: "./images/q2.jpg"
+      },
+      {
+        name: "臺北車站",
+        era: "1980年代　約民國69年",
+        image: "./images/q3.jpg"
+      }
+    ];
+
+    let passed = [false, false, false];
+    let currentIndex = 0;
+    let arRunning = false;
+
+    const app = document.getElementById("app");
+    const arScene = document.getElementById("arScene");
+
+    const progressText = document.getElementById("progressText");
+    const eraText = document.getElementById("eraText");
+    const nameText = document.getElementById("nameText");
+    const statusText = document.getElementById("statusText");
+    const photoImg = document.getElementById("photoImg");
+    const messageBox = document.getElementById("messageBox");
+    const scanMessage = document.getElementById("scanMessage");
+    const goFindBtn = document.getElementById("goFindBtn");
+    const cancelScanBtn = document.getElementById("cancelScanBtn");
+
+    function updateProgress() {
+      const count = passed.filter(Boolean).length;
+      const percent = Math.round((count / questions.length) * 100);
+      progressText.innerText = `答題率：${percent}%　已完成 ${count}/${questions.length}`;
+    }
+
+    function renderQuestion(index) {
+      currentIndex = index;
+      const q = questions[index];
+
+      eraText.innerText = q.era;
+      nameText.innerText = q.name;
+      photoImg.src = q.image;
+
+      if (passed[index]) {
+        statusText.innerText = "PASS";
+        statusText.style.color = "#3c8c3c";
+        goFindBtn.innerText = "PASS";
+      } else {
+        statusText.innerText = "尚未辨識";
+        statusText.style.color = "#8a6d24";
+        goFindBtn.innerText = "Go find";
+      }
+
+      updateProgress();
+    }
+
+    async function startAR() {
+      app.classList.add("scanning");
+      scanMessage.innerText = "正在啟動 AR 鏡頭，請允許相機權限。";
+
+      try {
+        const mindarSystem = arScene.systems["mindar-image-system"];
+
+        if (!mindarSystem) {
+          scanMessage.innerText = "AR 系統尚未載入完成，請等 1 秒後再試。";
+          app.classList.remove("scanning");
+          return;
+        }
+
+        await mindarSystem.start();
+        arRunning = true;
+        scanMessage.innerText = "AR 鏡頭已啟動，請對準展場指定老照片。";
+
+      } catch (err) {
+        console.error(err);
+        scanMessage.innerText = "AR 鏡頭啟動失敗，請確認相機權限，並用 Chrome / Safari 開啟。";
+      }
+    }
+
+    async function stopAR() {
+      try {
+        const mindarSystem = arScene.systems["mindar-image-system"];
+        if (mindarSystem && arRunning) {
+          await mindarSystem.stop();
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+
+      arRunning = false;
+      app.classList.remove("scanning");
+    }
+
+    async function showFound(index) {
+      passed[index] = true;
+      renderQuestion(index);
+
+      const q = questions[index];
+      messageBox.innerText = `已辨識到「${q.name}」／${q.era}`;
+
+      await stopAR();
+    }
+
+    function bindTarget(targetId, index) {
+      const target = document.getElementById(targetId);
+      if (!target) return;
+
+      target.addEventListener("targetFound", () => {
+        showFound(index);
+      });
+
+      target.addEventListener("targetLost", () => {
+        scanMessage.innerText = "照片離開鏡頭，請重新對準。";
+      });
+    }
+
+    bindTarget("target0", 0);
+    bindTarget("target1", 1);
+    bindTarget("target2", 2);
+
+    goFindBtn.addEventListener("click", startAR);
+    cancelScanBtn.addEventListener("click", stopAR);
+
+    renderQuestion(0);
+  </script>
+
+</body>
+</html>
